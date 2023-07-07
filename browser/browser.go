@@ -27,7 +27,7 @@ func ClockIn(b *rod.Browser) error {
 	})
 
 	if err != nil {
-		_ = fmt.Errorf(err.Error())
+		fmt.Println(err.Error())
 		return err
 	}
 	fmt.Println("Clocked in successfully")
@@ -36,6 +36,11 @@ func ClockIn(b *rod.Browser) error {
 
 func ClockOut(b *rod.Browser) error {
 	page, err := signIn(b)
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
 
 	// Value: 2 = out, 1 = in
 	err = rod.Try(func() {
@@ -51,7 +56,7 @@ func ClockOut(b *rod.Browser) error {
 	})
 
 	if err != nil {
-		_ = fmt.Errorf(err.Error())
+		fmt.Println(err.Error())
 		return err
 	}
 	fmt.Println("Clocked out successfully")
@@ -73,39 +78,13 @@ func signIn(b *rod.Browser) (*rod.Page, error) {
 		fmt.Println("Logged in already")
 	}
 
+	fmt.Println("Going to time sheet")
 	err := gotoTimeSheet(page)
 	if err != nil {
 		return page, err // Could not access time sheet
 	}
 
 	return page, nil
-}
-
-func gotoTimeSheet(page *rod.Page) error {
-	err := rod.Try(func() {
-		_, err := page.Element("a.ps-button#PT_NOTIFY")
-		if err != nil {
-			panic(err)
-		}
-		page.MustElementX("/html/body/form/div[2]/div[4]/div[2]/div/div/div/div/div[4]/section/div/div[3]/div[1]/div[1]/div/span/a").MustClick()
-
-		page.MustWaitStable()
-
-		page.MustElementR("a", "Employee Self Service").MustClick()
-
-		page.MustWaitStable()
-
-		page.MustElementR("div.ps_box-group[role=\"link\"]", "Time Reporting").MustClick()
-
-		page.MustWaitStable()
-
-	})
-
-	if err != nil {
-		_ = fmt.Errorf(err.Error())
-		return errors.New("Could not access time sheet")
-	}
-	return nil
 }
 
 func mySmuLogin(page *rod.Page) error {
@@ -137,5 +116,34 @@ func mySmuLogin(page *rod.Page) error {
 		return err
 	}
 
+	return nil
+}
+
+func gotoTimeSheet(page *rod.Page) error {
+	err := rod.Try(func() {
+		_, err := page.Timeout(time.Second * 25).Element(`a.ps-button[title="Homepage Selector"]`)
+		if err != nil {
+			fmt.Println("Could not find pt_notify")
+			panic(err)
+		}
+		page.Timeout(time.Second * 5).MustElementX("/html/body/form/div[2]/div[4]/div[2]/div/div/div/div/div[4]/section/div/div[3]/div[1]/div[1]/div/span/a").MustClick()
+
+		page.MustWaitStable()
+
+		fmt.Println("Looking for self service button")
+		page.MustElementR("a", "Employee Self Service").MustClick()
+
+		page.MustWaitStable()
+
+		fmt.Println("Looking for time reporting")
+		page.MustElementR("div.ps_box-group[role=\"link\"]", "Time Reporting").MustClick()
+
+		page.MustWaitStable()
+	})
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return errors.New("Could not access time sheet")
+	}
 	return nil
 }

@@ -5,22 +5,17 @@
 # build rod-manager
 FROM golang as go
 
-ARG goproxy="https://proxy.golang.org,direct"
 
 COPY . /houdini
 WORKDIR /houdini
-RUN go env -w GOPROXY=$goproxy
-RUN go build ./lib/launcher/rod-manager
-RUN go run ./lib/utils/get-browser
+RUN go build
 
 FROM ubuntu:jammy
 
-COPY --from=go /root/.cache/rod /root/.cache/rod
-RUN ln -s /root/.cache/rod/browser/$(ls /root/.cache/rod/browser)/chrome /usr/bin/chrome
+RUN mkdir houdini
+WORKDIR /houdini
 
-RUN touch /.dockerenv
-
-COPY --from=go /rod/rod-manager /usr/bin/
+COPY --from=go /houdini/houdini ./houdini
 
 ARG apt_sources="http://archive.ubuntu.com"
 
@@ -46,6 +41,7 @@ RUN sed -i "s|http://archive.ubuntu.com|$apt_sources|g" /etc/apt/sources.list &&
     rm -rf /var/lib/apt/lists/*
 
 # process reaper
-ENTRYPOINT ["dumb-init", "--"]
 
-CMD rod-manager
+EXPOSE 8080
+
+CMD ["./houdini"]
